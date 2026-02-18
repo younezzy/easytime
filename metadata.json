@@ -1,0 +1,5 @@
+{
+  "name": "Fluent Clock",
+  "description": "A Windows 11 inspired Clock application featuring Timer, Alarm, and Stopwatch functionalities in a sleek dark mode interface.",
+  "requestFramePermissions": []
+}
