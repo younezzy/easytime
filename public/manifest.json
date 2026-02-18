@@ -1,0 +1,27 @@
+{
+  "name": "Horloge Facile",
+  "short_name": "Horloge",
+  "description": "Application d'horloge, minuteur, chronomètre et réveil",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#202020",
+  "theme_color": "#76b9ed",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "fr-FR",
+  "prefer_related_applications": false
+}
