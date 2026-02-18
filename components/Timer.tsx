@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Utilisation des nouvelles URLs fournies
 const DEFAULT_SOUND_1 = "https://ik.imagekit.io/clwjg33dzn/An_original,_underst__2-1770653026374.mp3";
 const DEFAULT_SOUND_2 = "https://ik.imagekit.io/clwjg33dzn/An_original,_underst__4-1770653030241.mp3";
+const NO_SOUND_URL = "__NO_SOUND__";
 
 const DEFAULT_SOUNDS: Sound[] = [
+  { id: 'no-sound', name: '🔇 Aucun son', url: NO_SOUND_URL, isCustom: false },
   { id: 'default-1', name: 'Cosmic', url: DEFAULT_SOUND_1, isCustom: false },
   { id: 'default-2', name: 'Ethereal', url: DEFAULT_SOUND_2, isCustom: false },
 ];
@@ -106,26 +108,43 @@ const Timer: React.FC = () => {
       }
 
       const soundToPlay = timer.soundUrl || DEFAULT_SOUND_1;
-      try {
-        ringAudioRef.current = new Audio(soundToPlay);
-        ringAudioRef.current.loop = true; // Loop is explicitly set here
-        // Important: catch error if play fails (e.g. user hasn't interacted with document)
-        const playPromise = ringAudioRef.current.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.warn("Auto-play prevented:", error);
-            });
+      
+      // Ne jouer le son que si ce n'est pas "Aucun son"
+      if (soundToPlay !== NO_SOUND_URL) {
+        try {
+          ringAudioRef.current = new Audio(soundToPlay);
+          ringAudioRef.current.loop = true; // Loop is explicitly set here
+          // Important: catch error if play fails (e.g. user hasn't interacted with document)
+          const playPromise = ringAudioRef.current.play();
+          if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                  console.warn("Auto-play prevented:", error);
+              });
+          }
+        } catch (err) {
+            console.warn("Audio initialization failed:", err);
         }
-      } catch (err) {
-          console.warn("Audio initialization failed:", err);
       }
       
+      // Notification système améliorée
       if (Notification.permission === 'granted') {
-          new Notification("Minuteur terminé", { body: timer.label });
+          new Notification("⏱️ Minuteur terminé", { 
+            body: timer.label || "Le minuteur est terminé",
+            icon: "/icons/icon.svg",
+            badge: "/icons/icon.svg",
+            tag: `timer-${timer.id}`,
+            requireInteraction: true
+          });
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-                new Notification("Minuteur terminé", { body: timer.label });
+                new Notification("⏱️ Minuteur terminé", { 
+                  body: timer.label || "Le minuteur est terminé",
+                  icon: "/icons/icon.svg",
+                  badge: "/icons/icon.svg",
+                  tag: `timer-${timer.id}`,
+                  requireInteraction: true
+                });
             }
         });
       }
@@ -585,10 +604,17 @@ const Timer: React.FC = () => {
                       <button 
                         onClick={() => {
                             const sound = availableSounds.find(s => s.url === selectedSoundUrl);
-                            if (sound) togglePreviewSound(sound.url, sound.id);
+                            if (sound && sound.url !== NO_SOUND_URL) togglePreviewSound(sound.url, sound.id);
                         }}
-                        className={`p-2.5 rounded-md border border-[var(--border)] transition-colors ${previewPlaying ? 'bg-[var(--accent)] text-[var(--text-inverted)] border-[var(--accent)]' : 'bg-[var(--bg-hover)] text-[var(--text-main)] hover:bg-[var(--border)]'}`}
-                        title="Écouter"
+                        disabled={selectedSoundUrl === NO_SOUND_URL}
+                        className={`p-2.5 rounded-md border border-[var(--border)] transition-colors ${
+                          selectedSoundUrl === NO_SOUND_URL 
+                            ? 'opacity-50 cursor-not-allowed bg-[var(--bg-hover)] text-[var(--text-muted)]' 
+                            : previewPlaying 
+                              ? 'bg-[var(--accent)] text-[var(--text-inverted)] border-[var(--accent)]' 
+                              : 'bg-[var(--bg-hover)] text-[var(--text-main)] hover:bg-[var(--border)]'
+                        }`}
+                        title={selectedSoundUrl === NO_SOUND_URL ? "Aucun son sélectionné" : "Écouter"}
                       >
                          {previewPlaying ? <Square size={18} fill="currentColor" /> : <Volume2 size={18} />}
                       </button>

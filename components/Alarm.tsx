@@ -7,8 +7,10 @@ import { generateId } from '../utils';
 // Sounds Configuration
 const DEFAULT_SOUND_1 = "https://ik.imagekit.io/clwjg33dzn/An_original,_underst__2-1770653026374.mp3";
 const DEFAULT_SOUND_2 = "https://ik.imagekit.io/clwjg33dzn/An_original,_underst__4-1770653030241.mp3";
+const NO_SOUND_URL = "__NO_SOUND__";
 
 const DEFAULT_SOUNDS: Sound[] = [
+  { id: 'no-sound', name: '🔇 Aucun son', url: NO_SOUND_URL, isCustom: false },
   { id: 'default-1', name: 'Cosmic', url: DEFAULT_SOUND_1, isCustom: false },
   { id: 'default-2', name: 'Ethereal', url: DEFAULT_SOUND_2, isCustom: false },
 ];
@@ -85,19 +87,29 @@ const Alarm: React.FC = () => {
 
       const soundToPlay = alarm.soundUrl || DEFAULT_SOUND_1;
 
-      try {
-        audioRef.current = new Audio(soundToPlay);
-        audioRef.current.loop = true;
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-             playPromise.catch(e => console.error("Audio play failed (Alarm):", e));
+      // Ne jouer le son que si ce n'est pas "Aucun son"
+      if (soundToPlay !== NO_SOUND_URL) {
+        try {
+          audioRef.current = new Audio(soundToPlay);
+          audioRef.current.loop = true;
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+               playPromise.catch(e => console.error("Audio play failed (Alarm):", e));
+          }
+        } catch (e) {
+            console.warn("Failed to initialize audio:", e);
         }
-      } catch (e) {
-          console.warn("Failed to initialize audio:", e);
       }
 
+      // Notification système améliorée
       if (Notification.permission === "granted") {
-          new Notification("Alarme", { body: alarm.label || "Alarme !" });
+          new Notification("⏰ Alarme", { 
+            body: alarm.label || "Alarme !",
+            icon: "/icons/icon.svg",
+            badge: "/icons/icon.svg",
+            tag: `alarm-${alarm.id}`,
+            requireInteraction: true
+          });
       }
   };
 
@@ -389,10 +401,17 @@ const Alarm: React.FC = () => {
                       <button 
                         onClick={() => {
                             const sound = availableSounds.find(s => s.url === selectedSoundUrl);
-                            if (sound) togglePreviewSound(sound.url, sound.id);
+                            if (sound && sound.url !== NO_SOUND_URL) togglePreviewSound(sound.url, sound.id);
                         }}
-                        className={`p-2.5 rounded-md border border-[var(--border)] transition-colors ${previewPlaying ? 'bg-[var(--accent)] text-[var(--text-inverted)] border-[var(--accent)]' : 'bg-[var(--bg-hover)] text-[var(--text-main)] hover:bg-[var(--border)]'}`}
-                        title="Écouter"
+                        disabled={selectedSoundUrl === NO_SOUND_URL}
+                        className={`p-2.5 rounded-md border border-[var(--border)] transition-colors ${
+                          selectedSoundUrl === NO_SOUND_URL 
+                            ? 'opacity-50 cursor-not-allowed bg-[var(--bg-hover)] text-[var(--text-muted)]' 
+                            : previewPlaying 
+                              ? 'bg-[var(--accent)] text-[var(--text-inverted)] border-[var(--accent)]' 
+                              : 'bg-[var(--bg-hover)] text-[var(--text-main)] hover:bg-[var(--border)]'
+                        }`}
+                        title={selectedSoundUrl === NO_SOUND_URL ? "Aucun son sélectionné" : "Écouter"}
                       >
                          {previewPlaying ? <Square size={18} fill="currentColor" /> : <Volume2 size={18} />}
                       </button>
