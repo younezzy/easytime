@@ -24,14 +24,20 @@ const DEFAULT_TIMERS_DATA: TimerType[] = [
 ];
 
 const Digit = ({ value }: { value: string }) => (
-  <div className="relative w-[0.6em] h-[1.1em] inline-flex justify-center overflow-hidden">
+  <div className="relative w-[0.65em] h-[1.1em] inline-flex justify-center overflow-hidden tabular-nums">
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.span
         key={value}
-        initial={{ y: '50%', opacity: 0, filter: 'blur(2px)' }}
-        animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
-        exit={{ y: '-50%', opacity: 0, filter: 'blur(2px)' }}
-        transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
+        initial={{ y: '60%', opacity: 0 }}
+        animate={{ y: '0%', opacity: 1 }}
+        exit={{ y: '-60%', opacity: 0 }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 300, 
+          damping: 30,
+          mass: 0.5
+        }}
+        style={{ willChange: "transform, opacity" }}
         className="absolute inset-0 flex items-center justify-center font-[Segoe UI Variable Display]"
       >
         {value}
@@ -39,6 +45,126 @@ const Digit = ({ value }: { value: string }) => (
     </AnimatePresence>
   </div>
 );
+
+interface TimerItemProps {
+  timer: TimerType;
+  menuOpenId: string | null;
+  setMenuOpenId: (id: string | null) => void;
+  toggleTimer: (id: string) => void;
+  resetTimer: (id: string) => void;
+  openEditModal: (timer: TimerType) => void;
+  deleteTimer: (id: string) => void;
+  menuRef: React.RefObject<HTMLDivElement>;
+}
+
+const TimerItem = React.memo(({ 
+  timer, 
+  menuOpenId, 
+  setMenuOpenId, 
+  toggleTimer, 
+  resetTimer, 
+  openEditModal, 
+  deleteTimer,
+  menuRef 
+}: TimerItemProps) => {
+  const { hDisplay, mDisplay, sDisplay } = formatTime(timer.remainingSeconds);
+  const percent = timer.initialSeconds > 0 
+    ? ((timer.initialSeconds - timer.remainingSeconds) / timer.initialSeconds) * 100 
+    : 0;
+
+  return (
+    <div className="bg-[var(--bg-card)] rounded-lg p-5 aspect-[4/5] flex flex-col justify-between relative group border border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all duration-200 shadow-md">
+      {/* Header: Title & Menu */}
+      <div className="flex justify-between items-start text-[var(--text-main)] z-10 relative h-6 shrink-0">
+        <span className="font-semibold text-[15px] tracking-wide truncate pr-8" title={timer.label}>{timer.label}</span>
+        
+        <div className="absolute right-0 -top-1">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === timer.id ? null : timer.id); }}
+                className={`text-[var(--text-muted)] p-1 rounded-md transition-all duration-200 
+                ${menuOpenId === timer.id 
+                    ? 'opacity-100 bg-[var(--bg-hover)] scale-100 text-[var(--text-main)]' 
+                    : 'opacity-0 group-hover:opacity-100 hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] hover:scale-110'
+                }`}
+            >
+                <MoreHorizontal size={20} />
+            </button>
+            
+            <AnimatePresence>
+            {menuOpenId === timer.id && (
+                <motion.div 
+                    ref={menuRef} 
+                    initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 top-8 w-40 bg-[var(--bg-popover)] border border-[var(--border)] rounded-lg shadow-xl z-50 flex flex-col p-1 overflow-hidden"
+                >
+                     <button 
+                        onClick={() => openEditModal(timer)}
+                        className="flex items-center px-3 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--bg-hover)] rounded-md text-left transition-colors"
+                     >
+                         <Edit2 size={14} className="mr-3" />
+                         Editer
+                     </button>
+                     <button 
+                        onClick={() => deleteTimer(timer.id)}
+                        className="flex items-center px-3 py-2 text-sm text-red-400 hover:bg-[var(--bg-hover)] hover:text-red-300 rounded-md text-left transition-colors"
+                     >
+                         <Trash2 size={14} className="mr-3" />
+                         Supprimer
+                     </button>
+                </motion.div>
+            )}
+            </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Circle & Digits */}
+      <div className="flex-1 flex items-center justify-center relative min-h-0">
+        <div className="relative w-[180px] h-[180px] flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90 drop-shadow-lg">
+                <circle cx="90" cy="90" r="86" stroke="var(--border)" strokeWidth="4" fill="transparent"/>
+                <circle cx="90" cy="90" r="86" stroke="var(--accent)" strokeWidth="4" fill="transparent" strokeLinecap="round" strokeDasharray={2 * Math.PI * 86} strokeDashoffset={2 * Math.PI * 86 * (percent / 100)} 
+                    className="transition-all duration-1000 ease-linear"
+                    style={{ willChange: "stroke-dashoffset" }}
+                />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-4xl font-light tracking-widest text-[var(--text-main)] select-none tabular-nums">
+                {timer.initialSeconds >= 3600 ? (
+                    <>
+                        <Digit value={hDisplay[0]} /><Digit value={hDisplay[1]} />
+                        <span className="text-[var(--text-muted)] mx-[1px] -mt-1">:</span>
+                    </>
+                ) : null}
+                <Digit value={mDisplay[0]} /><Digit value={mDisplay[1]} />
+                <span className="text-[var(--text-muted)] mx-[1px] -mt-1">:</span>
+                <Digit value={sDisplay[0]} /><Digit value={sDisplay[1]} />
+            </div>
+        </div>
+      </div>
+
+      {/* Footer: Controls */}
+      <div className="flex justify-center items-center gap-4 pt-2 h-16 shrink-0 z-10">
+        <button
+          onClick={() => toggleTimer(timer.id)}
+          className={`h-14 w-14 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)]`}
+        >
+          {timer.isRunning ? <Pause size={24} className="text-[var(--text-inverted)] fill-[var(--text-inverted)]" /> : <Play size={24} className="text-[var(--text-inverted)] fill-[var(--text-inverted)] ml-1" />}
+        </button>
+        
+        <button
+            onClick={() => resetTimer(timer.id)}
+            disabled={timer.initialSeconds === timer.remainingSeconds && !timer.isRunning}
+            className={`h-10 w-10 rounded-full flex items-center justify-center bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[var(--text-main)] transition-all 
+                ${timer.initialSeconds === timer.remainingSeconds && !timer.isRunning ? 'opacity-30 cursor-not-allowed scale-90' : 'opacity-100 scale-100'}`}
+        >
+            <RotateCcw size={16} />
+        </button>
+      </div>
+    </div>
+  );
+});
 
 const Timer: React.FC = () => {
   // Initialisation avec récupération du localStorage
@@ -392,107 +518,19 @@ const Timer: React.FC = () => {
   return (
     <div className="p-6 md:p-8 h-full flex flex-col relative overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-24 pr-2">
-        {timers.map((timer) => {
-          const { hDisplay, mDisplay, sDisplay } = formatTime(timer.remainingSeconds);
-          const percent = timer.initialSeconds > 0 
-            ? ((timer.initialSeconds - timer.remainingSeconds) / timer.initialSeconds) * 100 
-            : 0;
-          
-          return (
-            <div key={timer.id} className="bg-[var(--bg-card)] rounded-lg p-5 aspect-[4/5] flex flex-col justify-between relative group border border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all duration-200 shadow-md">
-              
-              {/* Header: Title & Menu */}
-              <div className="flex justify-between items-start text-[var(--text-main)] z-10 relative h-6 shrink-0">
-                <span className="font-semibold text-[15px] tracking-wide truncate pr-8" title={timer.label}>{timer.label}</span>
-                
-                {/* Menu Button */}
-                <div className="absolute right-0 -top-1">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === timer.id ? null : timer.id); }}
-                        className={`text-[var(--text-muted)] p-1 rounded-md transition-all duration-200 
-                        ${menuOpenId === timer.id 
-                            ? 'opacity-100 bg-[var(--bg-hover)] scale-100 text-[var(--text-main)]' 
-                            : 'opacity-0 group-hover:opacity-100 hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] hover:scale-110'
-                        }`}
-                    >
-                        <MoreHorizontal size={20} />
-                    </button>
-                    
-                    {/* Context Menu with Animation */}
-                    <AnimatePresence>
-                    {menuOpenId === timer.id && (
-                        <motion.div 
-                            ref={menuRef} 
-                            initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="absolute right-0 top-8 w-40 bg-[var(--bg-popover)] border border-[var(--border)] rounded-lg shadow-xl z-50 flex flex-col p-1 overflow-hidden"
-                        >
-                             <button 
-                                onClick={() => openEditModal(timer)}
-                                className="flex items-center px-3 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--bg-hover)] rounded-md text-left transition-colors"
-                             >
-                                 <Edit2 size={14} className="mr-3" />
-                                 Editer
-                             </button>
-                             <button 
-                                onClick={() => deleteTimer(timer.id)}
-                                className="flex items-center px-3 py-2 text-sm text-red-400 hover:bg-[var(--bg-hover)] hover:text-red-300 rounded-md text-left transition-colors"
-                             >
-                                 <Trash2 size={14} className="mr-3" />
-                                 Supprimer
-                             </button>
-                        </motion.div>
-                    )}
-                    </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Circle & Digits */}
-              <div className="flex-1 flex items-center justify-center relative min-h-0">
-                <div className="relative w-[180px] h-[180px] flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90 drop-shadow-lg">
-                        <circle cx="90" cy="90" r="86" stroke="var(--border)" strokeWidth="4" fill="transparent"/>
-                        <circle cx="90" cy="90" r="86" stroke="var(--accent)" strokeWidth="4" fill="transparent" strokeLinecap="round" strokeDasharray={2 * Math.PI * 86} strokeDashoffset={2 * Math.PI * 86 * (percent / 100)} className="transition-all duration-1000 ease-linear"/>
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-4xl font-light tracking-widest text-[var(--text-main)] select-none">
-                        {hDisplay !== '00' && (
-                            <>
-                                <Digit value={hDisplay[0]} /><Digit value={hDisplay[1]} />
-                                <span className="text-[var(--text-muted)] mx-[1px] -mt-1">:</span>
-                            </>
-                        )}
-                        <Digit value={mDisplay[0]} /><Digit value={mDisplay[1]} />
-                        <span className="text-[var(--text-muted)] mx-[1px] -mt-1">:</span>
-                        <Digit value={sDisplay[0]} /><Digit value={sDisplay[1]} />
-                    </div>
-                </div>
-              </div>
-
-              {/* Footer: Controls */}
-              <div className="flex justify-center items-center gap-4 pt-2 h-16 shrink-0 z-10">
-                {/* Play/Pause */}
-                <button
-                  onClick={() => toggleTimer(timer.id)}
-                  className={`h-14 w-14 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)]`}
-                >
-                  {timer.isRunning ? <Pause size={24} className="text-[var(--text-inverted)] fill-[var(--text-inverted)]" /> : <Play size={24} className="text-[var(--text-inverted)] fill-[var(--text-inverted)] ml-1" />}
-                </button>
-                
-                {/* Reset Button */}
-                <button
-                    onClick={() => resetTimer(timer.id)}
-                    disabled={timer.initialSeconds === timer.remainingSeconds && !timer.isRunning}
-                    className={`h-10 w-10 rounded-full flex items-center justify-center bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[var(--text-main)] transition-all 
-                        ${timer.initialSeconds === timer.remainingSeconds && !timer.isRunning ? 'opacity-30 cursor-not-allowed scale-90' : 'opacity-100 scale-100'}`}
-                >
-                    <RotateCcw size={16} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {timers.map((timer) => (
+          <TimerItem 
+            key={timer.id}
+            timer={timer}
+            menuOpenId={menuOpenId}
+            setMenuOpenId={setMenuOpenId}
+            toggleTimer={toggleTimer}
+            resetTimer={resetTimer}
+            openEditModal={openEditModal}
+            deleteTimer={deleteTimer}
+            menuRef={menuRef}
+          />
+        ))}
       </div>
 
       <div className="absolute bottom-8 right-8 flex space-x-3 z-10">
