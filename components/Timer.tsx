@@ -287,17 +287,21 @@ const Timer: React.FC = () => {
   useEffect(() => {
       const interval = setInterval(() => {
           const now = Date.now();
-          const elapsed = Math.floor((now - lastTickRef.current) / 1000);
+          const elapsedMs = now - lastTickRef.current;
+          const elapsedSecs = Math.floor(elapsedMs / 1000);
           
-          if (elapsed >= 1) {
-              lastTickRef.current = now;
+          if (elapsedSecs >= 1) {
+              // On avance la référence du dernier tick par multiples de secondes entières
+              // pour ne pas perdre les millisecondes restantes (le surplus)
+              lastTickRef.current += elapsedSecs * 1000;
+              
               setTimers(prev => {
                   let hasChanges = false;
                   const next = prev.map(t => {
                       if (t.isRunning) {
                           if (t.remainingSeconds > 0) {
                               hasChanges = true;
-                              const newRemaining = Math.max(0, t.remainingSeconds - elapsed);
+                              const newRemaining = Math.max(0, t.remainingSeconds - elapsedSecs);
                               if (newRemaining === 0) {
                                   setTimeout(() => handleTimerFinishRef.current(t), 0);
                                   return { ...t, remainingSeconds: 0, isRunning: false };

@@ -46,7 +46,7 @@ const Alarm: React.FC = () => {
   const [selectedSoundUrl, setSelectedSoundUrl] = useState<string>(DEFAULT_SOUND_1);
 
   const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
-  const lastTriggeredRef = useRef<string | null>(null);
+  const lastCheckRef = useRef<number>(Date.now());
   
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -126,27 +126,33 @@ const Alarm: React.FC = () => {
   useEffect(() => {
     const checkAlarms = () => {
       const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const currentTime = `${hours}:${minutes}`;
+      const nowMs = now.getTime();
+      const lastCheckMs = lastCheckRef.current;
+      lastCheckRef.current = nowMs;
+
       const dayMapping = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
-      const currentDay = dayMapping[now.getDay()];
 
-      // On ne vérifie que si la minute a changé pour éviter les déclenchements multiples
-      if (lastTriggeredRef.current === currentTime) return;
+      alarms.forEach(alarm => {
+        if (!alarm.isActive || ringingAlarm) return;
 
-      const alarmToTrigger = alarms.find(alarm => {
-         if (!alarm.isActive) return false;
-         if (alarm.time !== currentTime) return false;
-         
-         if (alarm.days.length === 0) return true;
-         return alarm.days.includes(currentDay);
+        // Parse alarm time
+        const [aHours, aMinutes] = alarm.time.split(':').map(Number);
+        
+        // Create date object for today's alarm
+        const alarmDate = new Date(now);
+        alarmDate.setHours(aHours, aMinutes, 0, 0);
+        const alarmMs = alarmDate.getTime();
+
+        // Check if alarm time falls between last check and now
+        // OR if it's the exact same minute and we haven't triggered it yet
+        // (adding a small buffer or checking if last check was before alarm)
+        const currentDay = dayMapping[now.getDay()];
+        const isCorrectDay = alarm.days.length === 0 || alarm.days.includes(currentDay);
+
+        if (isCorrectDay && alarmMs > lastCheckMs && alarmMs <= nowMs) {
+          triggerAlarm(alarm);
+        }
       });
-
-      if (alarmToTrigger && !ringingAlarm) {
-         lastTriggeredRef.current = currentTime;
-         triggerAlarm(alarmToTrigger);
-      }
     };
 
     const interval = setInterval(checkAlarms, 1000);

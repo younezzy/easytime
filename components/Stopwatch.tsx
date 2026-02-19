@@ -24,23 +24,25 @@ const Stopwatch: React.FC = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [laps, setLaps] = useState<Lap[]>([]);
   const requestRef = useRef<number>(0);
-  const previousTimeRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);
+  const accumulatedTimeRef = useRef<number>(0);
 
-  const animate = (time: number) => {
-    if (previousTimeRef.current !== undefined && previousTimeRef.current !== 0) {
-      const deltaTime = time - previousTimeRef.current;
-      setElapsedTime(prevTime => prevTime + deltaTime);
+  const animate = () => {
+    if (isRunning) {
+      const now = performance.now();
+      const currentElapsed = accumulatedTimeRef.current + (now - startTimeRef.current);
+      setElapsedTime(currentElapsed);
+      requestRef.current = requestAnimationFrame(animate);
     }
-    previousTimeRef.current = time;
-    requestRef.current = requestAnimationFrame(animate);
   };
 
   useEffect(() => {
     if (isRunning) {
+      startTimeRef.current = performance.now();
       requestRef.current = requestAnimationFrame(animate);
     } else {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
-      previousTimeRef.current = 0;
+      accumulatedTimeRef.current = elapsedTime;
     }
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
@@ -48,20 +50,15 @@ const Stopwatch: React.FC = () => {
   }, [isRunning]);
 
   const toggleStart = () => {
-    if (!isRunning) {
-      previousTimeRef.current = performance.now();
-      setIsRunning(true);
-    } else {
-      setIsRunning(false);
-      previousTimeRef.current = 0;
-    }
+    setIsRunning(!isRunning);
   };
 
   const reset = () => {
     setIsRunning(false);
     setElapsedTime(0);
     setLaps([]);
-    previousTimeRef.current = 0;
+    accumulatedTimeRef.current = 0;
+    startTimeRef.current = 0;
   };
 
   const addLap = () => {
