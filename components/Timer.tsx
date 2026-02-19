@@ -79,6 +79,7 @@ const Timer: React.FC = () => {
   // Refs for Audio
   const ringAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lastTickRef = useRef<number>(Date.now());
 
   // Sauvegarde dans le localStorage à chaque changement
   useEffect(() => {
@@ -159,25 +160,30 @@ const Timer: React.FC = () => {
   // Timer Tick Logic
   useEffect(() => {
       const interval = setInterval(() => {
-          setTimers(prev => {
-              let hasChanges = false;
-              const next = prev.map(t => {
-                  if (t.isRunning) {
-                      if (t.remainingSeconds > 0) {
-                          hasChanges = true;
-                          return { ...t, remainingSeconds: t.remainingSeconds - 1 };
-                      } else {
-                          // Timer just hit 0
-                          hasChanges = true;
-                          // Call the ref function to ensure we use the latest closure
-                          setTimeout(() => handleTimerFinishRef.current(t), 0);
-                          return { ...t, isRunning: false };
+          const now = Date.now();
+          const elapsed = Math.floor((now - lastTickRef.current) / 1000);
+          
+          if (elapsed >= 1) {
+              lastTickRef.current = now;
+              setTimers(prev => {
+                  let hasChanges = false;
+                  const next = prev.map(t => {
+                      if (t.isRunning) {
+                          if (t.remainingSeconds > 0) {
+                              hasChanges = true;
+                              const newRemaining = Math.max(0, t.remainingSeconds - elapsed);
+                              if (newRemaining === 0) {
+                                  setTimeout(() => handleTimerFinishRef.current(t), 0);
+                                  return { ...t, remainingSeconds: 0, isRunning: false };
+                              }
+                              return { ...t, remainingSeconds: newRemaining };
+                          }
                       }
-                  }
-                  return t;
+                      return t;
+                  });
+                  return hasChanges ? next : prev;
               });
-              return hasChanges ? next : prev;
-          });
+          }
       }, 1000);
 
     const handleClickOutside = (event: MouseEvent) => {
@@ -207,6 +213,7 @@ const Timer: React.FC = () => {
       if (!finishedTimer) return;
       
       const additionalSeconds = minutes * 60;
+      lastTickRef.current = Date.now();
       
       setTimers(prev => prev.map(t => {
           if (t.id === finishedTimer.id) {
@@ -292,7 +299,16 @@ const Timer: React.FC = () => {
 
   const toggleTimer = (id: string) => {
     setTimers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isRunning: !t.isRunning } : t))
+      prev.map((t) => {
+          if (t.id === id) {
+              // Réinitialiser le dernier tick au moment où on démarre
+              if (!t.isRunning) {
+                  lastTickRef.current = Date.now();
+              }
+              return { ...t, isRunning: !t.isRunning };
+          }
+          return t;
+      })
     );
   };
 

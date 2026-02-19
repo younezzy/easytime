@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Hourglass, Bell, Timer, Settings, X, Check, Sun, Moon, Zap, ZapOff } from 'lucide-react';
+import { Hourglass, Bell, Timer, Settings, X, Check, Sun, Moon, Zap, ZapOff, Coffee } from 'lucide-react';
 import { Tab } from '../types';
 import { useTheme, PRESET_COLORS } from './ThemeContext';
 
@@ -10,7 +10,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { theme, setMode, setAccentColor, setReducedMotion } = useTheme();
+  const { theme, setMode, setAccentColor, setReducedMotion, setWakeLockEnabled } = useTheme();
 
   const menuItems = [
     { id: 'minuteur', label: 'Minuteur', icon: Hourglass },
@@ -119,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
               </section>
 
               {/* Motion Reduced */}
-              <section className="mb-4">
+              <section className="mb-6">
                  <h3 className="text-sm font-medium text-[var(--text-muted)] uppercase mb-3 tracking-wider">Accessibilité</h3>
                  <div 
                     onClick={() => setReducedMotion(!theme.reducedMotion)}
@@ -138,6 +138,31 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         <div className={`absolute top-1 w-4 h-4 bg-[var(--toggle-circle)] rounded-full transition-all shadow-sm ${theme.reducedMotion ? 'left-6' : 'left-1'}`}></div>
                     </div>
                  </div>
+              </section>
+
+              {/* Wake Lock Protection */}
+              <section className="mb-4">
+                 <h3 className="text-sm font-medium text-[var(--text-muted)] uppercase mb-3 tracking-wider">Performance</h3>
+                 <div 
+                    onClick={() => setWakeLockEnabled(!theme.wakeLockEnabled)}
+                    className="flex items-center justify-between p-4 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
+                 >
+                    <div className="flex items-center gap-3">
+                       <Coffee size={20} className={theme.wakeLockEnabled ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'} />
+                       <div className="flex flex-col">
+                          <span className="text-sm font-medium">Empêcher la mise en veille</span>
+                          <span className="text-xs text-[var(--text-muted)]">Maintient l'écran allumé pour les alarmes</span>
+                       </div>
+                    </div>
+                    
+                    {/* Toggle Switch */}
+                    <div className={`w-11 h-6 rounded-full relative transition-colors ${theme.wakeLockEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-[var(--toggle-circle)] rounded-full transition-all shadow-sm ${theme.wakeLockEnabled ? 'left-6' : 'left-1'}`}></div>
+                    </div>
+                 </div>
+                 <p className="mt-2 text-[10px] text-[var(--text-muted)] px-1 italic">
+                    Note: Nécessite que l'onglet reste visible et que Windows ne soit pas en mode "Économie d'énergie" strict.
+                 </p>
               </section>
            </div>
         </div>

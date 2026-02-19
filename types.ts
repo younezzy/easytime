@@ -38,6 +38,7 @@ export interface AppTheme {
   mode: ThemeMode;
   accentColor: string;
   reducedMotion: boolean;
+  wakeLockEnabled: boolean;
 }
 
 export interface ThemeContextType {
@@ -45,4 +46,5 @@ export interface ThemeContextType {
   setMode: (mode: ThemeMode) => void;
   setAccentColor: (color: string) => void;
   setReducedMotion: (enabled: boolean) => void;
+  setWakeLockEnabled: (enabled: boolean) => void;
 }

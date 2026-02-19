@@ -46,6 +46,7 @@ const Alarm: React.FC = () => {
   const [selectedSoundUrl, setSelectedSoundUrl] = useState<string>(DEFAULT_SOUND_1);
 
   const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
+  const lastTriggeredRef = useRef<string | null>(null);
   
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -128,13 +129,11 @@ const Alarm: React.FC = () => {
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
       const currentTime = `${hours}:${minutes}`;
-      const currentSeconds = now.getSeconds();
-      
-      // Prevent multiple triggers within the same minute
-      if (currentSeconds !== 0) return;
-
       const dayMapping = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
       const currentDay = dayMapping[now.getDay()];
+
+      // On ne vérifie que si la minute a changé pour éviter les déclenchements multiples
+      if (lastTriggeredRef.current === currentTime) return;
 
       const alarmToTrigger = alarms.find(alarm => {
          if (!alarm.isActive) return false;
@@ -145,6 +144,7 @@ const Alarm: React.FC = () => {
       });
 
       if (alarmToTrigger && !ringingAlarm) {
+         lastTriggeredRef.current = currentTime;
          triggerAlarm(alarmToTrigger);
       }
     };

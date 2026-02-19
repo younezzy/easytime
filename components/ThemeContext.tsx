@@ -5,6 +5,7 @@ const defaultTheme: AppTheme = {
   mode: 'dark',
   accentColor: '#76b9ed',
   reducedMotion: false,
+  wakeLockEnabled: true,
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -13,7 +14,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<AppTheme>(() => {
     try {
       const saved = localStorage.getItem('fluent_clock_theme');
-      return saved ? JSON.parse(saved) : defaultTheme;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Assurer que les nouvelles propriétés sont présentes
+        return { ...defaultTheme, ...parsed };
+      }
+      return defaultTheme;
     } catch {
       return defaultTheme;
     }
@@ -41,20 +47,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Apply Accent Color variable
     html.style.setProperty('--accent', theme.accentColor);
-    // Simple logic to darken accent for hover, could be improved with color libraries
-    // For now, let's keep it simple or use CSS color-mix if supported, 
-    // but here we just rely on opacity or a filter in CSS. 
-    // We will update the --accent-hover variable.
-    // Since we don't have a color manipulation lib, we'll assume the user picks from our presets 
-    // or we just reuse the accent with opacity in Tailwind.
   }, [theme]);
 
   const setMode = (mode: ThemeMode) => setTheme(prev => ({ ...prev, mode }));
   const setAccentColor = (accentColor: string) => setTheme(prev => ({ ...prev, accentColor }));
   const setReducedMotion = (reducedMotion: boolean) => setTheme(prev => ({ ...prev, reducedMotion }));
+  const setWakeLockEnabled = (wakeLockEnabled: boolean) => setTheme(prev => ({ ...prev, wakeLockEnabled }));
 
   return (
-    <ThemeContext.Provider value={{ theme, setMode, setAccentColor, setReducedMotion }}>
+    <ThemeContext.Provider value={{ theme, setMode, setAccentColor, setReducedMotion, setWakeLockEnabled }}>
       {children}
     </ThemeContext.Provider>
   );
