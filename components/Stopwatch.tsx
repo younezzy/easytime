@@ -1,15 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Flag, Maximize2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { formatStopwatch } from '../utils';
 import { Lap } from '../types';
 
-// Animated Digit Component
+// Animated Digit Component (reuse Timer-style animation)
 const AnimatedDigit = ({ value }: { value: string }) => {
     return (
-      <div className="relative inline-block overflow-hidden h-[1.1em] align-top w-[0.7em]">
-        <span key={value} className="absolute inset-0 flex justify-center animate-slide-up">
-          {value}
-        </span>
+      <div className="relative w-[0.7em] h-[1.1em] inline-flex justify-center overflow-hidden tabular-nums">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={value}
+            initial={{ y: '60%', opacity: 0 }}
+            animate={{ y: '0%', opacity: 1 }}
+            exit={{ y: '-60%', opacity: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 30,
+              mass: 0.5
+            }}
+            style={{ willChange: 'transform, opacity' }}
+            className="absolute inset-0 flex items-center justify-center font-[Segoe UI Variable Display]"
+          >
+            {value}
+          </motion.span>
+        </AnimatePresence>
       </div>
     );
 };
@@ -77,32 +93,29 @@ const Stopwatch: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full relative p-8">
       
-      {/* Animation Styles */}
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(70%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slide-up {
-          animation: slideUp 0.15s ease-out;
-        }
-      `}</style>
+      {/* animation handled by framer-motion per-digit */}
 
       {/* Time Display */}
       <div className="flex flex-col items-center mb-10 mt-6 z-10">
         <div className="font-[Segoe UI Variable Display] font-semibold text-[13vh] leading-none tracking-wider tabular-nums flex items-baseline select-none text-[var(--text-main)]">
-          <div className="flex justify-end">
-             {/* Split chars for individual animation if needed, or grouped. Grouped works better for layout stability */}
+          {/* Minutes */}
+          <div className="flex items-baseline">
              <AnimatedDigit value={m[0]} />
              <AnimatedDigit value={m[1]} />
           </div>
+
           <StaticDigit value=":" />
-          <div className="flex justify-center">
+
+          {/* Seconds */}
+          <div className="flex items-baseline">
              <AnimatedDigit value={s[0]} />
              <AnimatedDigit value={s[1]} />
           </div>
-          <div className="text-4xl text-[var(--text-muted)] font-normal ml-3 pb-2 flex">
-              .<span className="tabular-nums w-[2ch]">{ms}</span>
+
+          {/* Fractional seconds — smaller and baseline-aligned */}
+          <div className="ml-3 flex items-baseline text-[6.5vh] text-[var(--text-muted)] font-normal">
+              <span className="leading-none">.</span>
+              <span className="tabular-nums w-[2ch] ml-1 text-[4.2vh]">{ms}</span>
           </div>
         </div>
       </div>
