@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Hourglass, Bell, Timer, Settings, X, Check, Sun, Moon, Zap, ZapOff, Coffee } from 'lucide-react';
 import { Tab } from '../types';
 import { useTheme, PRESET_COLORS } from './ThemeContext';
+import { motion } from 'framer-motion';
 
 interface SidebarProps {
   activeTab: Tab;
@@ -10,6 +11,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const [modalAnimationState, setModalAnimationState] = useState<'idle'|'entering'|'entered'|'exiting'>('idle');
+   const MODAL_ANIM_DURATION = 220;
   const { theme, setMode, setAccentColor, setReducedMotion, setWakeLockEnabled } = useTheme();
 
   const menuItems = [
@@ -25,35 +28,42 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           {menuItems.map((item) => {
               const isActive = activeTab === item.id;
               const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id as Tab)}
-                  className={`flex items-center h-10 mx-1 px-3 rounded-md transition-all duration-200 group relative
-                    ${isActive ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
-                >
-                  {isActive && (
-                      <div className="absolute left-1 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-full"></div>
-                  )}
-                  <Icon 
-                    size={18} 
-                    className={`${isActive ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'} min-w-[20px] ml-1`} 
-                    strokeWidth={isActive ? 2 : 1.5} 
-                  />
-                  <span className={`ml-4 text-sm font-normal hidden md:block ${isActive ? 'text-[var(--text-main)] font-semibold' : 'text-[var(--text-muted)]'}`}>
-                    {item.label}
-                  </span>
-                </button>
+                     return (
+                        <motion.button
+                           key={item.id}
+                           onClick={() => setActiveTab(item.id as Tab)}
+                           className={`flex items-center h-10 mx-1 px-3 rounded-md transition-all duration-200 group relative
+                              ${isActive ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
+                           whileHover={!theme.reducedMotion ? { scale: 1.02 } : undefined}
+                           whileTap={!theme.reducedMotion ? { scale: 0.98 } : undefined}
+                           transition={{ duration: 0.18, ease: [0,0.67,0,1] }}
+                        >
+                           {isActive && (
+                                 <motion.div layoutId="sidebar-active-indicator" className="absolute left-1 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-full" />
+                           )}
+                           <Icon 
+                              size={18} 
+                              className={`${isActive ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'} min-w-[20px] ml-1`} 
+                              strokeWidth={isActive ? 2 : 1.5} 
+                           />
+                           <span className={`ml-4 text-sm font-normal hidden md:block ${isActive ? 'text-[var(--text-main)] font-semibold' : 'text-[var(--text-muted)]'}`}>
+                              {item.label}
+                           </span>
+                        </motion.button>
               );
           })}
         </div>
 
         {/* Settings Button */}
         <div className="pb-4 pt-2 border-t border-[var(--border)] mx-1">
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center h-10 w-full px-3 rounded-md transition-all duration-200 hover:bg-[var(--bg-hover)] group"
-          >
+               <button
+                  onClick={() => {
+                     setIsSettingsOpen(true);
+                     setModalAnimationState('entering');
+                     window.setTimeout(() => setModalAnimationState('entered'), MODAL_ANIM_DURATION);
+                  }}
+                  className="flex items-center h-10 w-full px-3 rounded-md transition-all duration-200 hover:bg-[var(--bg-hover)] group"
+               >
              <Settings 
                 size={18} 
                 className="text-[var(--text-muted)] group-hover:text-[var(--text-main)] min-w-[20px] ml-1" 
@@ -67,12 +77,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       </div>
 
       {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-           <div className="bg-[var(--bg-card)] w-[500px] rounded-xl shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+         {isSettingsOpen && (
+            <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm modal-overlay ${modalAnimationState === 'entering' ? 'overlay-enter' : ''} ${modalAnimationState === 'entered' ? 'overlay-entered' : ''} ${modalAnimationState === 'exiting' ? 'overlay-exit' : ''}`}>
+                <div className={`bg-[var(--bg-card)] w-[500px] rounded-xl shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col max-h-[90vh] overflow-y-auto modal-card ${modalAnimationState === 'entering' ? 'modal-enter' : ''} ${modalAnimationState === 'entered' ? 'modal-entered' : ''} ${modalAnimationState === 'exiting' ? 'modal-exit' : ''}`}>
               <div className="flex justify-between items-center mb-6 border-b border-[var(--border)] pb-4">
                  <h2 className="text-xl font-semibold">Paramètres</h2>
-                 <button onClick={() => setIsSettingsOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 hover:bg-[var(--bg-hover)] rounded-md">
+                 <button onClick={() => {
+                     setModalAnimationState('exiting');
+                     window.setTimeout(() => { setIsSettingsOpen(false); setModalAnimationState('idle'); }, MODAL_ANIM_DURATION);
+                 }} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 hover:bg-[var(--bg-hover)] rounded-md">
                     <X size={20} />
                  </button>
               </div>

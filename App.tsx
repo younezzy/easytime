@@ -5,10 +5,19 @@ import Alarm from './components/Alarm';
 import Stopwatch from './components/Stopwatch';
 import { Tab } from './types';
 import { ThemeProvider, useTheme } from './components/ThemeContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('minuteur');
   const { theme } = useTheme();
+
+  const reduced = theme.reducedMotion;
+
+  const containerVariants = {
+    enter: { opacity: 0, y: 8, scale: 0.995 },
+    center: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -8, scale: 0.995 },
+  } as const;
 
   // Screen Wake Lock API
   useEffect(() => {
@@ -53,15 +62,27 @@ const AppContent: React.FC = () => {
       
       <main className="flex-1 h-full overflow-hidden flex flex-col relative">
         <div className="flex-1 overflow-auto relative scroll-smooth h-full">
-          <div style={{ display: activeTab === 'minuteur' ? 'block' : 'none', height: '100%' }}>
-            <Timer />
-          </div>
-          <div style={{ display: activeTab === 'alarme' ? 'block' : 'none', height: '100%' }}>
-            <Alarm />
-          </div>
-          <div style={{ display: activeTab === 'chrono' ? 'block' : 'none', height: '100%' }}>
-            <Stopwatch />
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              variants={containerVariants}
+              initial={reduced ? false : 'enter'}
+              animate={reduced ? 'center' : 'center'}
+              exit={reduced ? false : 'exit'}
+              transition={{ duration: reduced ? 0 : 0.22, ease: [0,0.67,0,1] }}
+              className="h-full"
+            >
+              <div style={{ display: activeTab === 'minuteur' ? 'block' : 'none', height: '100%' }}>
+                <Timer />
+              </div>
+              <div style={{ display: activeTab === 'alarme' ? 'block' : 'none', height: '100%' }}>
+                <Alarm />
+              </div>
+              <div style={{ display: activeTab === 'chrono' ? 'block' : 'none', height: '100%' }}>
+                <Stopwatch />
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
     </div>

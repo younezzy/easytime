@@ -49,6 +49,34 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     html.style.setProperty('--accent', theme.accentColor);
   }, [theme]);
 
+  // Inject global modal animation styles so all popups can share the same animation
+  useEffect(() => {
+    const styleId = 'global-modal-animations';
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement('style');
+    style.id = styleId;
+    const MODAL_ANIM_DURATION = 220;
+    style.innerHTML = `
+      /* Modal card animations and sensible initial state so the animation is visible */
+      @keyframes modal-in { from { transform: scale(1.15); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      @keyframes modal-out { from { transform: scale(1); opacity: 1; } to { transform: scale(1.15); opacity: 0; } }
+      /* Default hidden state to avoid flash before animation */
+      .modal-card { transform-origin: center center; transform: scale(1.15); opacity: 0; }
+      .modal-enter { animation: modal-in ${MODAL_ANIM_DURATION}ms cubic-bezier(0,0.67,0,1) forwards; }
+      .modal-entered { transform: scale(1); opacity: 1; }
+      .modal-exit { animation: modal-out ${MODAL_ANIM_DURATION}ms cubic-bezier(0,0.67,0,1) forwards; }
+
+      /* Overlay (backdrop) animations and initial hidden state */
+      @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes overlay-out { from { opacity: 1; } to { opacity: 0; } }
+      .modal-overlay { opacity: 0; }
+      .overlay-enter { animation: overlay-in ${MODAL_ANIM_DURATION}ms cubic-bezier(0,0.67,0,1) forwards; }
+      .overlay-entered { opacity: 1; }
+      .overlay-exit { animation: overlay-out ${MODAL_ANIM_DURATION}ms cubic-bezier(0,0.67,0,1) forwards; }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const setMode = (mode: ThemeMode) => setTheme(prev => ({ ...prev, mode }));
   const setAccentColor = (accentColor: string) => setTheme(prev => ({ ...prev, accentColor }));
   const setReducedMotion = (reducedMotion: boolean) => setTheme(prev => ({ ...prev, reducedMotion }));

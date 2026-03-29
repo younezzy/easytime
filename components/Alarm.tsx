@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Pencil, Trash2, Bell, BellOff, X, ChevronUp, ChevronDown, Disc, Edit2, Volume2, Square, Upload } from 'lucide-react';
+import SoundSelect from './SoundSelect';
 import { Alarm as AlarmType, Sound } from '../types';
 import { generateId } from '../utils';
 
@@ -13,7 +14,16 @@ const DEFAULT_SOUNDS: Sound[] = [
   { id: 'no-sound', name: '🔇 Aucun son', url: NO_SOUND_URL, isCustom: false },
   { id: 'default-1', name: 'Cosmic', url: DEFAULT_SOUND_1, isCustom: false },
   { id: 'default-2', name: 'Ethereal', url: DEFAULT_SOUND_2, isCustom: false },
+  { id: 'rhythmic', name: 'UIAlert Rhythmic', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-Rhythmic_mobile_ring-Elevenlabs.mp3', isCustom: false },
+  { id: 'beep-classic', name: 'BEEP Classic', url: 'https://ik.imagekit.io/clwjg33dzn/BEEP-classic_mobile_ringt-Elevenlabs.mp3', isCustom: false },
+  { id: 'create-festive', name: 'Create Festive', url: 'https://ik.imagekit.io/clwjg33dzn/MUSCStr-_Create_a_festive_an-Elevenlabs.mp3', isCustom: false },
+  { id: 'UIAlert-15s', name: 'UIAlert 15s', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs.mp3', isCustom: false },
+  { id: 'UIAlert-15s-1', name: 'UIAlert 15s (1)', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs%20(1).mp3', isCustom: false },
+  { id: 'UIAlert-15s-2', name: 'UIAlert 15s (2)', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs%20(2).mp3', isCustom: false },
 ];
+
+// Suggestions de noms d'alarme par défaut (utilisés à la création)
+const DEFAULT_ALARM_NAMES = ['Enfantin', 'Lumière', 'Doux', 'Espoir', 'Matinal', 'Sérénité'];
 
 const DAYS_OPTIONS = ['L', 'Ma', 'Me', 'J', 'V', 'S', 'D'];
 const DEFAULT_ALARMS: AlarmType[] = [];
@@ -42,8 +52,18 @@ const Alarm: React.FC = () => {
   const [modalHours, setModalHours] = useState(7);
   const [modalMinutes, setModalMinutes] = useState(0);
   const [modalLabel, setModalLabel] = useState('Alarme');
-  const [modalDays, setModalDays] = useState<string[]>(['L', 'Ma', 'Me', 'J', 'V']);
+  // Empty array means "every day" (no restriction)
+  const [modalDays, setModalDays] = useState<string[]>([]);
   const [selectedSoundUrl, setSelectedSoundUrl] = useState<string>(DEFAULT_SOUND_1);
+  const [modalAnimationState, setModalAnimationState] = useState<'idle'|'entering'|'entered'|'exiting'>('idle');
+  const MODAL_ANIM_DURATION = 220; // ms
+
+  // ringing overlay animation state
+  const [ringingAnimState, setRingingAnimState] = useState<'idle'|'entering'|'entered'|'exiting'>('idle');
+
+  // Custom snooze UI state
+  const [showCustomSnooze, setShowCustomSnooze] = useState(false);
+  const [customSnoozeMinutes, setCustomSnoozeMinutes] = useState<string>('5');
 
   const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
   const lastCheckRef = useRef<number>(Date.now());
@@ -51,6 +71,7 @@ const Alarm: React.FC = () => {
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const snoozeTimeoutRef = useRef<number | null>(null);
 
   // Sauvegarde dans le localStorage à chaque changement
   useEffect(() => {
@@ -78,7 +99,11 @@ const Alarm: React.FC = () => {
   }, []);
 
   const triggerAlarm = (alarm: AlarmType) => {
+      console.log('[Alarm] triggerAlarm called for', alarm);
       setRingingAlarm(alarm);
+      // animate ringing overlay
+      setRingingAnimState('entering');
+      window.setTimeout(() => setRingingAnimState('entered'), MODAL_ANIM_DURATION);
       
       // Stop previous audio if any
       if (audioRef.current) {
@@ -115,12 +140,49 @@ const Alarm: React.FC = () => {
   };
 
   const stopAlarm = () => {
-      setRingingAlarm(null);
+      // animate out then clear
       if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setRingingAnimState('exiting');
+      window.setTimeout(() => {
+        setRingingAlarm(null);
+        setRingingAnimState('idle');
+      }, MODAL_ANIM_DURATION);
+      // Clear any scheduled snooze
+      if (snoozeTimeoutRef.current) {
+      clearTimeout(snoozeTimeoutRef.current);
+      snoozeTimeoutRef.current = null;
       }
   };
+
+    const snoozeAlarm = (alarm: AlarmType, minutes: number) => {
+      // Stop current ringing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setRingingAlarm(null);
+
+      // Clear any previously scheduled snooze
+      if (snoozeTimeoutRef.current) {
+        clearTimeout(snoozeTimeoutRef.current);
+        snoozeTimeoutRef.current = null;
+      }
+
+      // Schedule re-trigger after X minutes
+      try {
+        snoozeTimeoutRef.current = window.setTimeout(() => {
+          // Re-trigger the same alarm
+          triggerAlarm(alarm);
+          snoozeTimeoutRef.current = null;
+        }, minutes * 60 * 1000) as unknown as number;
+      } catch (e) {
+        // Fallback in case setTimeout behaves differently in the environment
+        console.warn('Failed to schedule snooze:', e);
+      }
+    };
 
   // Clock & Alarm Check Logic
   useEffect(() => {
@@ -158,6 +220,24 @@ const Alarm: React.FC = () => {
     const interval = setInterval(checkAlarms, 1000);
     return () => clearInterval(interval);
   }, [alarms, ringingAlarm]);
+
+  // Cleanup on unmount: stop audio and clear any scheduled snooze
+  useEffect(() => {
+    return () => {
+      if (snoozeTimeoutRef.current) {
+        clearTimeout(snoozeTimeoutRef.current);
+        snoozeTimeoutRef.current = null;
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   const toggleAlarm = (id: string) => {
       setAlarms(alarms.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a));
@@ -221,11 +301,15 @@ const Alarm: React.FC = () => {
   const openAddModal = () => {
       setModalHours(7);
       setModalMinutes(0);
-      setModalLabel('Alarme');
-      setModalDays(['L', 'Ma', 'Me', 'J', 'V']);
+      // Choisir un nom par défaut aléatoire dans la liste de suggestions
+      setModalLabel(DEFAULT_ALARM_NAMES[Math.floor(Math.random() * DEFAULT_ALARM_NAMES.length)]);
+      setModalDays([]); // default to every day for new alarms (easier for users)
       setSelectedSoundUrl(DEFAULT_SOUND_1);
       setEditingId(null);
       setIsModalOpen(true);
+      // trigger enter animation
+      setModalAnimationState('entering');
+      window.setTimeout(() => setModalAnimationState('entered'), MODAL_ANIM_DURATION);
   };
 
   const openEditModal = (alarm: AlarmType) => {
@@ -236,7 +320,9 @@ const Alarm: React.FC = () => {
       setModalDays(alarm.days);
       setSelectedSoundUrl(alarm.soundUrl || DEFAULT_SOUND_1);
       setEditingId(alarm.id);
-      setIsModalOpen(true);
+        setIsModalOpen(true);
+        setModalAnimationState('entering');
+        window.setTimeout(() => setModalAnimationState('entered'), MODAL_ANIM_DURATION);
   };
 
   const saveAlarm = () => {
@@ -267,8 +353,30 @@ const Alarm: React.FC = () => {
           };
           setAlarms([...alarms, newAlarm]);
       }
-      setIsModalOpen(false);
+        // close modal with animation
+        setModalAnimationState('exiting');
+        if (previewAudioRef.current) {
+          previewAudioRef.current.pause();
+          setPreviewPlaying(null);
+        }
+        window.setTimeout(() => {
+          setIsModalOpen(false);
+          setModalAnimationState('idle');
+        }, MODAL_ANIM_DURATION);
   };
+
+      const closeModal = () => {
+        // start exit animation
+        setModalAnimationState('exiting');
+        if (previewAudioRef.current) {
+          previewAudioRef.current.pause();
+          setPreviewPlaying(null);
+        }
+        window.setTimeout(() => {
+          setIsModalOpen(false);
+          setModalAnimationState('idle');
+        }, MODAL_ANIM_DURATION);
+      };
 
   const toggleDay = (day: string) => {
       setModalDays(prev => 
@@ -333,8 +441,10 @@ const Alarm: React.FC = () => {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-sm animate-in fade-in duration-200">
-           <div className="bg-[var(--bg-card)] w-[450px] rounded-xl shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        <div className={`absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-sm modal-overlay ${modalAnimationState === 'entering' ? 'overlay-enter' : ''} ${modalAnimationState === 'entered' ? 'overlay-entered' : ''} ${modalAnimationState === 'exiting' ? 'overlay-exit' : ''}`}>
+              <div className={
+                `bg-[var(--bg-card)] w-[450px] rounded-xl shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col max-h-[90vh] overflow-y-auto modal-card ${modalAnimationState === 'entering' ? 'modal-enter' : ''} ${modalAnimationState === 'entered' ? 'modal-entered' : ''} ${modalAnimationState === 'exiting' ? 'modal-exit' : ''}`
+              }>
               <h2 className="text-lg font-semibold mb-6">{editingId ? 'Modifier l\'alarme' : 'Ajouter une alarme'}</h2>
 
               {/* Time Picker */}
@@ -392,16 +502,7 @@ const Alarm: React.FC = () => {
                   <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">Sonnerie</label>
                   <div className="flex gap-2">
                       <div className="relative flex-1">
-                          <select 
-                            value={selectedSoundUrl}
-                            onChange={(e) => setSelectedSoundUrl(e.target.value)}
-                            className="bg-[var(--bg-hover)] text-[var(--text-main)] text-sm rounded-md block w-full p-2.5 outline-none border border-transparent focus:border-[var(--accent)] appearance-none"
-                          >
-                              {availableSounds.map(sound => (
-                                  <option key={sound.id} value={sound.url}>{sound.name}</option>
-                              ))}
-                          </select>
-                          <ChevronDown size={16} className="absolute right-3 top-3 text-[var(--text-muted)] pointer-events-none" />
+                        <SoundSelect sounds={availableSounds} value={selectedSoundUrl} onChange={(url) => setSelectedSoundUrl(url)} />
                       </div>
                       
                       <button 
@@ -438,7 +539,7 @@ const Alarm: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex justify-between space-x-3 mt-auto">
+                  <div className="flex justify-between space-x-3 mt-auto">
                   <button 
                     onClick={saveAlarm}
                     className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverted)] font-semibold rounded-md px-4 py-3 flex items-center justify-center transition-colors"
@@ -447,7 +548,7 @@ const Alarm: React.FC = () => {
                       Enregistrer
                   </button>
                   <button 
-                    onClick={() => { setIsModalOpen(false); if(previewAudioRef.current) { previewAudioRef.current.pause(); setPreviewPlaying(null); } }}
+                    onClick={() => { closeModal(); }}
                     className="flex-1 bg-[var(--bg-hover)] hover:bg-[var(--border)] text-[var(--text-main)] font-medium rounded-md px-4 py-3 flex items-center justify-center transition-colors border border-[var(--border)]"
                   >
                       <X size={20} className="mr-2" />
@@ -459,10 +560,10 @@ const Alarm: React.FC = () => {
       )}
 
       {/* Ringing Overlay - Portalled to body to show over any tab */}
-      {ringingAlarm && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-[var(--bg-card)] p-8 rounded-xl shadow-2xl border border-[var(--border)] w-full max-w-md text-center">
-                  <Bell className="w-16 h-16 text-[var(--accent)] mx-auto mb-6 animate-bounce" />
+        {ringingAlarm && createPortal(
+          <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-md modal-overlay ${ringingAnimState === 'entering' ? 'overlay-enter' : ''} ${ringingAnimState === 'entered' ? 'overlay-entered' : ''} ${ringingAnimState === 'exiting' ? 'overlay-exit' : ''}`}>
+            <div className={`bg-[var(--bg-card)] p-8 rounded-xl shadow-2xl border border-[var(--border)] w-full max-w-md text-center modal-card ${ringingAnimState === 'entering' ? 'modal-enter' : ''} ${ringingAnimState === 'entered' ? 'modal-entered' : ''} ${ringingAnimState === 'exiting' ? 'modal-exit' : ''}`}>
+              <Bell className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" />
                   <h2 className="text-5xl font-light mb-2 text-[var(--text-main)] font-[Segoe UI Variable Display]">{ringingAlarm.time}</h2>
                   <p className="text-xl text-[var(--text-muted)] mb-8">{ringingAlarm.label}</p>
                   <button 
@@ -471,6 +572,22 @@ const Alarm: React.FC = () => {
                   >
                       Arrêter
                   </button>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button onClick={() => snoozeAlarm(ringingAlarm, 5)} className="px-3 py-2 rounded-md border border-[var(--border)] bg-[var(--bg-hover)] text-[var(--text-main)]">+5 min</button>
+                      <button onClick={() => snoozeAlarm(ringingAlarm, 10)} className="px-3 py-2 rounded-md border border-[var(--border)] bg-[var(--bg-hover)] text-[var(--text-main)]">+10 min</button>
+                      <button onClick={() => snoozeAlarm(ringingAlarm, 30)} className="px-3 py-2 rounded-md border border-[var(--border)] bg-[var(--bg-hover)] text-[var(--text-main)]">+30 min</button>
+                  </div>
+                  <div className="mt-3">
+                      {!showCustomSnooze ? (
+                        <button onClick={() => setShowCustomSnooze(true)} className="w-full mt-2 px-3 py-2 rounded-md border border-[var(--border)] bg-[var(--bg-hover)] text-[var(--text-main)]">Personnalisé...</button>
+                      ) : (
+                        <div className="flex gap-2 mt-2">
+                            <input type="number" min={1} value={customSnoozeMinutes} onChange={(e) => setCustomSnoozeMinutes(e.target.value)} className="flex-1 bg-[var(--bg-hover)] text-[var(--text-main)] border border-[var(--border)] rounded-md px-3 py-2 outline-none" />
+                            <button onClick={() => { if (ringingAlarm) { const m = Math.max(1, parseInt(customSnoozeMinutes || '0', 10) || 1); snoozeAlarm(ringingAlarm, m); setShowCustomSnooze(false); } }} className="px-3 py-2 rounded-md bg-[var(--accent)] text-[var(--text-inverted)]">OK</button>
+                            <button onClick={() => setShowCustomSnooze(false)} className="px-3 py-2 rounded-md bg-[var(--bg-hover)] border border-[var(--border)]">Annuler</button>
+                        </div>
+                      )}
+                  </div>
               </div>
           </div>,
           document.body

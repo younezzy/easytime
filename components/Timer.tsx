@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, RotateCcw, Plus, Pencil, ChevronUp, ChevronDown, X, Disc, MoreHorizontal, Trash2, Edit2, Bell, Upload, Volume2, Square } from 'lucide-react';
+import SoundSelect from './SoundSelect';
 import { Timer as TimerType, Sound } from '../types';
 import { formatTime, generateId } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,7 +14,13 @@ const NO_SOUND_URL = "__NO_SOUND__";
 const DEFAULT_SOUNDS: Sound[] = [
   { id: 'no-sound', name: '🔇 Aucun son', url: NO_SOUND_URL, isCustom: false },
   { id: 'default-1', name: 'Cosmic', url: DEFAULT_SOUND_1, isCustom: false },
-  { id: 'default-2', name: 'Ethereal', url: DEFAULT_SOUND_2, isCustom: false },
+  { id: 'default-2', name: 'Espace', url: DEFAULT_SOUND_2, isCustom: false },
+  { id: 'rhythmic', name: 'Classique', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-Rhythmic_mobile_ring-Elevenlabs.mp3', isCustom: false },
+  { id: 'beep-classic', name: 'Attention', url: 'https://ik.imagekit.io/clwjg33dzn/BEEP-classic_mobile_ringt-Elevenlabs.mp3', isCustom: false },
+  { id: 'create-festive', name: 'Festival', url: 'https://ik.imagekit.io/clwjg33dzn/MUSCStr-_Create_a_festive_an-Elevenlabs.mp3', isCustom: false },
+  { id: 'UIAlert-15s', name: 'Doux', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs.mp3', isCustom: false },
+  { id: 'UIAlert-15s-1', name: 'Enfantin', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs%20(1).mp3', isCustom: false },
+  { id: 'UIAlert-15s-2', name: 'Espoir', url: 'https://ik.imagekit.io/clwjg33dzn/UIAlert-15-second_seamless_l-Elevenlabs%20(2).mp3', isCustom: false },
 ];
 
 const DEFAULT_TIMERS_DATA: TimerType[] = [
@@ -197,6 +204,9 @@ const Timer: React.FC = () => {
   const [newSeconds, setNewSeconds] = useState(0);
   const [newLabel, setNewLabel] = useState('');
   const [selectedSoundUrl, setSelectedSoundUrl] = useState<string>(DEFAULT_SOUND_1);
+  const [modalAnimationState, setModalAnimationState] = useState<'idle'|'entering'|'entered'|'exiting'>('idle');
+  const [finishedAnimState, setFinishedAnimState] = useState<'idle'|'entering'|'entered'|'exiting'>('idle');
+  const MODAL_ANIM_DURATION = 220;
 
   // Menu State
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -228,6 +238,9 @@ const Timer: React.FC = () => {
   // Handler for timer finish
   const handleTimerFinish = (timer: TimerType) => {
       setFinishedTimer(timer);
+      // start finished overlay animation
+      setFinishedAnimState('entering');
+      window.setTimeout(() => setFinishedAnimState('entered'), MODAL_ANIM_DURATION);
       
       if (ringAudioRef.current) {
           ringAudioRef.current.pause();
@@ -334,7 +347,12 @@ const Timer: React.FC = () => {
           ringAudioRef.current.pause();
           ringAudioRef.current.currentTime = 0;
       }
-      setFinishedTimer(null);
+      // animate out then clear
+      setFinishedAnimState('exiting');
+      window.setTimeout(() => {
+        setFinishedTimer(null);
+        setFinishedAnimState('idle');
+      }, MODAL_ANIM_DURATION);
       setShowCustomInput(false);
       setCustomExtensionTime('');
   };
@@ -456,6 +474,8 @@ const Timer: React.FC = () => {
     setSelectedSoundUrl(DEFAULT_SOUND_1);
     setEditingId(null);
     setIsModalOpen(true);
+    setModalAnimationState('entering');
+    window.setTimeout(() => setModalAnimationState('entered'), MODAL_ANIM_DURATION);
   };
 
   const openEditModal = (timer: TimerType) => {
@@ -470,6 +490,8 @@ const Timer: React.FC = () => {
     setSelectedSoundUrl(timer.soundUrl || DEFAULT_SOUND_1);
     setEditingId(timer.id);
     setIsModalOpen(true);
+    setModalAnimationState('entering');
+    window.setTimeout(() => setModalAnimationState('entered'), MODAL_ANIM_DURATION);
     setMenuOpenId(null);
   };
 
@@ -502,12 +524,34 @@ const Timer: React.FC = () => {
         };
         setTimers([...timers, newTimer]);
     }
-    setIsModalOpen(false);
+    // close modal with animation
+    setModalAnimationState('exiting');
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      setPreviewPlaying(null);
+    }
+    window.setTimeout(() => {
+      setIsModalOpen(false);
+      setModalAnimationState('idle');
+    }, MODAL_ANIM_DURATION);
     setEditingId(null);
     if (previewAudioRef.current) {
         previewAudioRef.current.pause();
         setPreviewPlaying(null);
     }
+  };
+
+  const closeModal = () => {
+    setModalAnimationState('exiting');
+    if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        setPreviewPlaying(null);
+    }
+    window.setTimeout(() => {
+        setIsModalOpen(false);
+        setModalAnimationState('idle');
+        setEditingId(null);
+    }, MODAL_ANIM_DURATION);
   };
 
   const pad = (num: number) => num.toString().padStart(2, '0');
@@ -544,10 +588,10 @@ const Timer: React.FC = () => {
       </div>
 
       {/* Finished Timer Popup - Portalled to body to show over any tab */}
-      {finishedTimer && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-[var(--bg-card)] p-8 rounded-xl shadow-2xl border border-[var(--border)] w-full max-w-md text-center">
-                  <Bell className="w-16 h-16 text-[var(--accent)] mx-auto mb-6 animate-bounce" />
+        {finishedTimer && createPortal(
+          <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-md modal-overlay ${finishedAnimState === 'entering' ? 'overlay-enter' : ''} ${finishedAnimState === 'entered' ? 'overlay-entered' : ''} ${finishedAnimState === 'exiting' ? 'overlay-exit' : ''}`}>
+            <div className={`bg-[var(--bg-card)] p-8 rounded-xl shadow-2xl border border-[var(--border)] w-full max-w-md text-center modal-card ${finishedAnimState === 'entering' ? 'modal-enter' : ''} ${finishedAnimState === 'entered' ? 'modal-entered' : ''} ${finishedAnimState === 'exiting' ? 'modal-exit' : ''}`}>
+                  <Bell className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" />
                   <h2 className="text-3xl font-semibold text-[var(--text-main)] mb-2">{finishedTimer.label}</h2>
                   <p className="text-[var(--text-muted)] mb-8">Le minuteur est terminé</p>
                   
@@ -602,8 +646,8 @@ const Timer: React.FC = () => {
 
       {/* Add/Edit Timer Modal */}
       {isModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-sm">
-           <div className="bg-[var(--bg-card)] w-[450px] rounded-lg shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+        <div className={`absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-modal)] backdrop-blur-sm modal-overlay ${modalAnimationState === 'entering' ? 'overlay-enter' : ''} ${modalAnimationState === 'entered' ? 'overlay-entered' : ''} ${modalAnimationState === 'exiting' ? 'overlay-exit' : ''}`}>
+           <div className={`bg-[var(--bg-card)] w-[450px] rounded-lg shadow-2xl border border-[var(--border)] p-6 text-[var(--text-main)] flex flex-col max-h-[90vh] overflow-y-auto modal-card ${modalAnimationState === 'entering' ? 'modal-enter' : ''} ${modalAnimationState === 'entered' ? 'modal-entered' : ''} ${modalAnimationState === 'exiting' ? 'modal-exit' : ''}`}>
               <h2 className="text-base font-semibold mb-6">{editingId ? 'Modifier le minuteur' : 'Ajouter un nouveau minuteur'}</h2>
 
               {/* Time Picker */}
@@ -646,18 +690,9 @@ const Timer: React.FC = () => {
               <div className="mb-8">
                   <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">Sonnerie</label>
                   <div className="flex gap-2">
-                      <div className="relative flex-1">
-                          <select 
-                            value={selectedSoundUrl}
-                            onChange={(e) => setSelectedSoundUrl(e.target.value)}
-                            className="bg-[var(--bg-hover)] text-[var(--text-main)] text-sm rounded-md block w-full p-2.5 outline-none border border-transparent focus:border-[var(--accent)] appearance-none"
-                          >
-                              {availableSounds.map(sound => (
-                                  <option key={sound.id} value={sound.url}>{sound.name}</option>
-                              ))}
-                          </select>
-                          <ChevronDown size={16} className="absolute right-3 top-3 text-[var(--text-muted)] pointer-events-none" />
-                      </div>
+                        <div className="relative flex-1">
+                          <SoundSelect sounds={availableSounds} value={selectedSoundUrl} onChange={(url) => setSelectedSoundUrl(url)} />
+                        </div>
                       
                       <button 
                         onClick={() => {
@@ -702,7 +737,7 @@ const Timer: React.FC = () => {
                       Enregistrer
                   </button>
                   <button 
-                    onClick={() => { setIsModalOpen(false); if(previewAudioRef.current) { previewAudioRef.current.pause(); setPreviewPlaying(null); } }}
+                    onClick={() => { closeModal(); }}
                     className="flex-1 bg-[var(--bg-hover)] hover:bg-[var(--border)] text-[var(--text-main)] font-normal rounded-[4px] px-4 py-2 flex items-center justify-center transition-colors border border-[var(--border)]"
                   >
                       <X size={18} className="mr-2" />
