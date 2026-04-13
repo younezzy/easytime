@@ -219,6 +219,11 @@ const Timer: React.FC = () => {
 
   // Sauvegarde dans le localStorage à chaque changement
   useEffect(() => {
+    const sortedTimers = [...timers].sort((a, b) => a.initialSeconds - b.initialSeconds);
+    if (JSON.stringify(sortedTimers) !== JSON.stringify(timers)) {
+      setTimers(sortedTimers);
+      return; // Wait for the next render
+    }
     localStorage.setItem('fluent_clock_timers', JSON.stringify(timers));
   }, [timers]);
 

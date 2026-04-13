@@ -62,27 +62,17 @@ const AppContent: React.FC = () => {
       
       <main className="flex-1 h-full overflow-hidden flex flex-col relative">
         <div className="flex-1 overflow-auto relative scroll-smooth h-full">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              variants={containerVariants}
-              initial={reduced ? false : 'enter'}
-              animate={reduced ? 'center' : 'center'}
-              exit={reduced ? false : 'exit'}
-              transition={{ duration: reduced ? 0 : 0.22, ease: [0,0.67,0,1] }}
-              className="h-full"
-            >
-              <div style={{ display: activeTab === 'minuteur' ? 'block' : 'none', height: '100%' }}>
-                <Timer />
-              </div>
-              <div style={{ display: activeTab === 'alarme' ? 'block' : 'none', height: '100%' }}>
-                <Alarm />
-              </div>
-              <div style={{ display: activeTab === 'chrono' ? 'block' : 'none', height: '100%' }}>
-                <Stopwatch />
-              </div>
-            </motion.div>
-          </AnimatePresence>
+          <div className="h-full">
+            <div style={{ display: activeTab === 'minuteur' ? 'block' : 'none', height: '100%' }}>
+              <Timer />
+            </div>
+            <div style={{ display: activeTab === 'alarme' ? 'block' : 'none', height: '100%' }}>
+              <Alarm />
+            </div>
+            <div style={{ display: activeTab === 'chrono' ? 'block' : 'none', height: '100%' }}>
+              <Stopwatch />
+            </div>
+          </div>
         </div>
       </main>
     </div>

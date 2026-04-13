@@ -41,7 +41,31 @@ const Stopwatch: React.FC = () => {
   const [laps, setLaps] = useState<Lap[]>([]);
   const requestRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
-  const accumulatedTimeRef = useRef<number>(0);
+  const accumulatedTimeRef = useRef<number>((() => {
+    try {
+      const saved = localStorage.getItem('fluent_clock_stopwatch_accumulated');
+      return saved ? parseFloat(saved) : 0;
+    } catch (e) {
+      return 0;
+    }
+  })());
+
+  useEffect(() => {
+    try {
+      const savedLaps = localStorage.getItem('fluent_clock_stopwatch_laps');
+      if (savedLaps) setLaps(JSON.parse(savedLaps));
+      const savedElapsed = localStorage.getItem('fluent_clock_stopwatch_elapsed');
+      if (savedElapsed) setElapsedTime(parseFloat(savedElapsed));
+    } catch (e) {
+      console.error("Error loading stopwatch data", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('fluent_clock_stopwatch_laps', JSON.stringify(laps));
+    localStorage.setItem('fluent_clock_stopwatch_elapsed', elapsedTime.toString());
+    localStorage.setItem('fluent_clock_stopwatch_accumulated', accumulatedTimeRef.current.toString());
+  }, [laps, elapsedTime]);
 
   const animate = () => {
     if (isRunning) {

@@ -75,6 +75,11 @@ const Alarm: React.FC = () => {
 
   // Sauvegarde dans le localStorage à chaque changement
   useEffect(() => {
+    const sortedAlarms = [...alarms].sort((a, b) => a.time.localeCompare(b.time));
+    if (JSON.stringify(sortedAlarms) !== JSON.stringify(alarms)) {
+      setAlarms(sortedAlarms);
+      return; // Wait for the next render with sorted alarms
+    }
     localStorage.setItem('fluent_clock_alarms', JSON.stringify(alarms));
   }, [alarms]);
 
