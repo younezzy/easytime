@@ -66,6 +66,7 @@ const Alarm: React.FC = () => {
   const [customSnoozeMinutes, setCustomSnoozeMinutes] = useState<string>('5');
 
   const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
+  const [alarmQueue, setAlarmQueue] = useState<AlarmType[]>([]);
   const lastCheckRef = useRef<number>(Date.now());
   
   // Refs
@@ -105,6 +106,13 @@ const Alarm: React.FC = () => {
 
   const triggerAlarm = (alarm: AlarmType) => {
       console.log('[Alarm] triggerAlarm called for', alarm);
+      
+      // If an alarm is already ringing, add to queue and return
+      if (ringingAlarm) {
+        setAlarmQueue(prev => [...prev, alarm]);
+        return;
+      }
+
       setRingingAlarm(alarm);
       // animate ringing overlay
       setRingingAnimState('entering');
@@ -154,6 +162,13 @@ const Alarm: React.FC = () => {
       window.setTimeout(() => {
         setRingingAlarm(null);
         setRingingAnimState('idle');
+        
+        // Check if there are more alarms in the queue
+        if (alarmQueue.length > 0) {
+          const nextAlarm = alarmQueue[0];
+          setAlarmQueue(prev => prev.slice(1));
+          triggerAlarm(nextAlarm);
+        }
       }, MODAL_ANIM_DURATION);
       // Clear any scheduled snooze
       if (snoozeTimeoutRef.current) {
@@ -169,6 +184,13 @@ const Alarm: React.FC = () => {
         audioRef.current.currentTime = 0;
       }
       setRingingAlarm(null);
+
+      // Check if there are more alarms in the queue
+      if (alarmQueue.length > 0) {
+        const nextAlarm = alarmQueue[0];
+        setAlarmQueue(prev => prev.slice(1));
+        triggerAlarm(nextAlarm);
+      }
 
       // Clear any previously scheduled snooze
       if (snoozeTimeoutRef.current) {
@@ -200,7 +222,7 @@ const Alarm: React.FC = () => {
       const dayMapping = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
 
       alarms.forEach(alarm => {
-        if (!alarm.isActive || ringingAlarm) return;
+        if (!alarm.isActive) return;
 
         // Parse alarm time
         const [aHours, aMinutes] = alarm.time.split(':').map(Number);
