@@ -109,7 +109,7 @@ const Alarm: React.FC = () => {
       
       // If an alarm is already ringing, add to queue and return
       if (ringingAlarm) {
-        setAlarmQueue(prev => [...prev, alarm]);
+        setAlarmQueue((prev: AlarmType[]) => [...prev, alarm]);
         return;
       }
 
@@ -133,7 +133,7 @@ const Alarm: React.FC = () => {
           audioRef.current.loop = true;
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
-               playPromise.catch(e => console.error("Audio play failed (Alarm):", e));
+               playPromise.catch((e: Error) => console.error("Audio play failed (Alarm):", e));
           }
         } catch (e) {
             console.warn("Failed to initialize audio:", e);
@@ -166,7 +166,7 @@ const Alarm: React.FC = () => {
         // Check if there are more alarms in the queue
         if (alarmQueue.length > 0) {
           const nextAlarm = alarmQueue[0];
-          setAlarmQueue(prev => prev.slice(1));
+          setAlarmQueue((prev: AlarmType[]) => prev.slice(1));
           triggerAlarm(nextAlarm);
         }
       }, MODAL_ANIM_DURATION);
@@ -188,7 +188,7 @@ const Alarm: React.FC = () => {
       // Check if there are more alarms in the queue
       if (alarmQueue.length > 0) {
         const nextAlarm = alarmQueue[0];
-        setAlarmQueue(prev => prev.slice(1));
+        setAlarmQueue((prev: AlarmType[]) => prev.slice(1));
         triggerAlarm(nextAlarm);
       }
 
@@ -267,11 +267,11 @@ const Alarm: React.FC = () => {
   }, []);
 
   const toggleAlarm = (id: string) => {
-      setAlarms(alarms.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a));
+      setAlarms((prev: AlarmType[]) => prev.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a));
   };
 
   const deleteAlarm = (id: string) => {
-      setAlarms(alarms.filter(a => a.id !== id));
+      setAlarms((prev: AlarmType[]) => prev.filter(a => a.id !== id));
   };
 
   // Sound Handling Logic (duplicated from Timer for independence)
@@ -315,7 +315,7 @@ const Alarm: React.FC = () => {
             previewAudioRef.current.onended = () => setPreviewPlaying(null);
             const playPromise = previewAudioRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch(e => console.warn("Preview play failed:", e));
+                playPromise.catch((e: Error) => console.warn("Preview play failed:", e));
             }
             setPreviewPlaying(id);
           } catch(err) {
@@ -362,7 +362,7 @@ const Alarm: React.FC = () => {
       }
 
       if (editingId) {
-          setAlarms(prev => prev.map(a => a.id === editingId ? {
+          setAlarms((prev: AlarmType[]) => prev.map(a => a.id === editingId ? {
               ...a,
               time: timeStr,
               label: modalLabel,
@@ -378,7 +378,7 @@ const Alarm: React.FC = () => {
               days: modalDays,
               soundUrl: selectedSoundUrl
           };
-          setAlarms([...alarms, newAlarm]);
+          setAlarms((prev: AlarmType[]) => [...prev, newAlarm]);
       }
         // close modal with animation
         setModalAnimationState('exiting');
@@ -406,7 +406,7 @@ const Alarm: React.FC = () => {
       };
 
   const toggleDay = (day: string) => {
-      setModalDays(prev => 
+      setModalDays((prev: string[]) => 
           prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
       );
   };

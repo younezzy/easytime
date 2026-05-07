@@ -44,8 +44,15 @@ const Digit = ({ value }: { value: string }) => (
           damping: 30,
           mass: 0.5
         }}
-        style={{ willChange: "transform, opacity" }}
-        className="absolute inset-0 flex items-center justify-center font-[Segoe UI Variable Display]"
+        style={{ 
+          willChange: "transform, opacity",
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: '"Segoe UI Variable Display"'
+        }}
       >
         {value}
       </motion.span>
@@ -61,7 +68,7 @@ interface TimerItemProps {
   resetTimer: (id: string) => void;
   openEditModal: (timer: TimerType) => void;
   deleteTimer: (id: string) => void;
-  menuRef: React.RefObject<HTMLDivElement>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const TimerItem = React.memo(({ 
@@ -105,7 +112,21 @@ const TimerItem = React.memo(({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: -5 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
-                    className="absolute right-0 top-8 w-40 bg-[var(--bg-popover)] border border-[var(--border)] rounded-lg shadow-xl z-50 flex flex-col p-1 overflow-hidden"
+                    style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "2rem",
+                        width: "10rem",
+                        backgroundColor: "var(--bg-popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "0.5rem",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        zIndex: 50,
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "0.25rem",
+                        overflow: "hidden"
+                    }}
                 >
                      <button 
                         onClick={() => openEditModal(timer)}

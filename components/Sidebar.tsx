@@ -29,27 +29,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
               const isActive = activeTab === item.id;
               const Icon = item.icon;
                      return (
-                        <motion.button
-                           key={item.id}
-                           onClick={() => setActiveTab(item.id as Tab)}
-                           className={`flex items-center h-10 mx-1 px-3 rounded-md transition-all duration-200 group relative
-                              ${isActive ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
-                           whileHover={!theme.reducedMotion ? { scale: 1.02 } : undefined}
-                           whileTap={!theme.reducedMotion ? { scale: 0.98 } : undefined}
-                           transition={{ duration: 0.18, ease: [0,0.67,0,1] }}
-                        >
-                           {isActive && (
-                                 <motion.div layoutId="sidebar-active-indicator" className="absolute left-1 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-full" />
-                           )}
-                           <Icon 
-                              size={18} 
-                              className={`${isActive ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'} min-w-[20px] ml-1`} 
-                              strokeWidth={isActive ? 2 : 1.5} 
-                           />
-                           <span className={`ml-4 text-sm font-normal hidden md:block ${isActive ? 'text-[var(--text-main)] font-semibold' : 'text-[var(--text-muted)]'}`}>
-                              {item.label}
-                           </span>
-                        </motion.button>
+                        <div key={item.id} className="relative mx-1">
+                           <button
+                              onClick={() => setActiveTab(item.id as Tab)}
+                              className={`flex items-center h-10 w-full px-3 rounded-md transition-all duration-200 group relative
+                                 ${isActive ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
+                           >
+                              {isActive && (
+                                    <motion.div 
+                                       layoutId="sidebar-active-indicator" 
+                                       style={{
+                                          position: "absolute",
+                                          left: "0.25rem",
+                                          top: "0.75rem",
+                                          bottom: "0.75rem",
+                                          width: "0.25rem",
+                                          backgroundColor: "var(--accent)",
+                                          borderRadius: "9999px"
+                                       }}
+                                    />
+                              )}
+                              <Icon 
+                                 size={18} 
+                                 className={`${isActive ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'} min-w-[20px] ml-1`} 
+                                 strokeWidth={isActive ? 2 : 1.5} 
+                              />
+                              <span className={`ml-4 text-sm font-normal hidden md:block ${isActive ? 'text-[var(--text-main)] font-semibold' : 'text-[var(--text-muted)]'}`}>
+                                 {item.label}
+                              </span>
+                           </button>
+                        </div>
               );
           })}
         </div>

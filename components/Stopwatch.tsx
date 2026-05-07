@@ -20,8 +20,15 @@ const AnimatedDigit = ({ value }: { value: string }) => {
               damping: 30,
               mass: 0.5
             }}
-            style={{ willChange: 'transform, opacity' }}
-            className="absolute inset-0 flex items-center justify-center font-[Segoe UI Variable Display]"
+            style={{ 
+              willChange: 'transform, opacity',
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: '"Segoe UI Variable Display"'
+            }}
           >
             {value}
           </motion.span>
