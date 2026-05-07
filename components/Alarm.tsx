@@ -326,8 +326,9 @@ const Alarm: React.FC = () => {
   };
 
   const openAddModal = () => {
-      setModalHours(7);
-      setModalMinutes(0);
+      const now = new Date();
+      setModalHours(now.getHours());
+      setModalMinutes(now.getMinutes());
       // Choisir un nom par défaut aléatoire dans la liste de suggestions
       setModalLabel(DEFAULT_ALARM_NAMES[Math.floor(Math.random() * DEFAULT_ALARM_NAMES.length)]);
       setModalDays([]); // default to every day for new alarms (easier for users)
@@ -480,13 +481,33 @@ const Alarm: React.FC = () => {
                   
                   <div className="flex flex-col items-center mx-2 z-10">
                       <button onClick={() => increment(setModalHours, modalHours, 24)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 mb-1"><ChevronUp size={24}/></button>
-                      <div className="text-6xl font-light py-1 font-[Segoe UI Variable Display] tabular-nums w-[2ch] text-center">{pad(modalHours)}</div>
+                      <input 
+                        type="text"
+                        value={pad(modalHours)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(-2);
+                          const num = parseInt(val, 10);
+                          if (!isNaN(num) && num >= 0 && num < 24) setModalHours(num);
+                          else if (val === '') setModalHours(0);
+                        }}
+                        className="text-6xl font-light py-1 font-[Segoe UI Variable Display] tabular-nums w-[2ch] text-center bg-transparent border-none outline-none text-[var(--text-main)] focus:ring-0"
+                      />
                       <button onClick={() => decrement(setModalHours, modalHours, 24)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 mt-1"><ChevronDown size={24}/></button>
                   </div>
                   <span className="text-6xl pb-4 text-[var(--text-muted)] font-light mx-1">:</span>
                   <div className="flex flex-col items-center mx-2 z-10">
                       <button onClick={() => increment(setModalMinutes, modalMinutes, 60)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 mb-1"><ChevronUp size={24}/></button>
-                      <div className="text-6xl font-light py-1 font-[Segoe UI Variable Display] tabular-nums w-[2ch] text-center">{pad(modalMinutes)}</div>
+                      <input 
+                        type="text"
+                        value={pad(modalMinutes)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(-2);
+                          const num = parseInt(val, 10);
+                          if (!isNaN(num) && num >= 0 && num < 60) setModalMinutes(num);
+                          else if (val === '') setModalMinutes(0);
+                        }}
+                        className="text-6xl font-light py-1 font-[Segoe UI Variable Display] tabular-nums w-[2ch] text-center bg-transparent border-none outline-none text-[var(--text-main)] focus:ring-0"
+                      />
                       <button onClick={() => decrement(setModalMinutes, modalMinutes, 60)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 mt-1"><ChevronDown size={24}/></button>
                   </div>
               </div>
