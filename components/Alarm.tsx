@@ -68,11 +68,41 @@ const Alarm: React.FC = () => {
   const [ringingAlarm, setRingingAlarm] = useState<AlarmType | null>(null);
   const [alarmQueue, setAlarmQueue] = useState<AlarmType[]>([]);
   const lastCheckRef = useRef<number>(Date.now());
+  const ringingAlarmRef = useRef<AlarmType | null>(null);
+  const alarmQueueRef = useRef<AlarmType[]>([]);
   
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const snoozeTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    ringingAlarmRef.current = ringingAlarm;
+  }, [ringingAlarm]);
+
+  useEffect(() => {
+    alarmQueueRef.current = alarmQueue;
+  }, [alarmQueue]);
+
+  const enqueueAlarm = (alarm: AlarmType) => {
+      setAlarmQueue((prev: AlarmType[]) => {
+        if (prev.some(item => item.id === alarm.id)) {
+          return prev;
+        }
+        const nextQueue = [...prev, alarm];
+        alarmQueueRef.current = nextQueue;
+        return nextQueue;
+      });
+  };
+
+  const dequeueAndStartNextAlarm = () => {
+      const [nextAlarm, ...restQueue] = alarmQueueRef.current;
+      if (!nextAlarm) return;
+
+      alarmQueueRef.current = restQueue;
+      setAlarmQueue(restQueue);
+      startAlarm(nextAlarm);
+  };
 
   // Sauvegarde dans le localStorage à chaque changement
   useEffect(() => {
@@ -104,16 +134,12 @@ const Alarm: React.FC = () => {
     }
   }, []);
 
-  const triggerAlarm = (alarm: AlarmType) => {
-      console.log('[Alarm] triggerAlarm called for', alarm);
-      
-      // If an alarm is already ringing, add to queue and return
-      if (ringingAlarm) {
-        setAlarmQueue((prev: AlarmType[]) => [...prev, alarm]);
-        return;
-      }
+  const startAlarm = (alarm: AlarmType) => {
+      console.log('[Alarm] startAlarm called for', alarm);
 
+      ringingAlarmRef.current = alarm;
       setRingingAlarm(alarm);
+
       // animate ringing overlay
       setRingingAnimState('entering');
       window.setTimeout(() => setRingingAnimState('entered'), MODAL_ANIM_DURATION);
@@ -152,6 +178,18 @@ const Alarm: React.FC = () => {
       }
   };
 
+  const triggerAlarm = (alarm: AlarmType) => {
+      console.log('[Alarm] triggerAlarm called for', alarm);
+      
+      // If an alarm is already ringing, add to queue and return
+      if (ringingAlarmRef.current) {
+        enqueueAlarm(alarm);
+        return;
+      }
+
+      startAlarm(alarm);
+  };
+
   const stopAlarm = () => {
       // animate out then clear
       if (audioRef.current) {
@@ -161,14 +199,11 @@ const Alarm: React.FC = () => {
       setRingingAnimState('exiting');
       window.setTimeout(() => {
         setRingingAlarm(null);
+        ringingAlarmRef.current = null;
         setRingingAnimState('idle');
         
         // Check if there are more alarms in the queue
-        if (alarmQueue.length > 0) {
-          const nextAlarm = alarmQueue[0];
-          setAlarmQueue((prev: AlarmType[]) => prev.slice(1));
-          triggerAlarm(nextAlarm);
-        }
+        dequeueAndStartNextAlarm();
       }, MODAL_ANIM_DURATION);
       // Clear any scheduled snooze
       if (snoozeTimeoutRef.current) {
@@ -184,13 +219,10 @@ const Alarm: React.FC = () => {
         audioRef.current.currentTime = 0;
       }
       setRingingAlarm(null);
+      ringingAlarmRef.current = null;
 
       // Check if there are more alarms in the queue
-      if (alarmQueue.length > 0) {
-        const nextAlarm = alarmQueue[0];
-        setAlarmQueue((prev: AlarmType[]) => prev.slice(1));
-        triggerAlarm(nextAlarm);
-      }
+      dequeueAndStartNextAlarm();
 
       // Clear any previously scheduled snooze
       if (snoozeTimeoutRef.current) {
